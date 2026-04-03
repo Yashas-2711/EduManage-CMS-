@@ -1,0 +1,403 @@
+openapi: 3.0.0
+info:
+  title: College Management System API
+  version: 1.0.0
+  description: |
+    A full-featured RESTful API for managing students, courses, marks, fees, and attendance.
+    All protected routes require a Bearer JWT token.
+  contact:
+    name: CMS Support
+    email: support@cms.edu
+
+servers:
+  - url: http://localhost:5000/api/v1
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, staff, teacher] }
+        isActive: { type: boolean }
+
+    Student:
+      type: object
+      properties:
+        id: { type: integer }
+        rollNumber: { type: string }
+        firstName: { type: string }
+        lastName: { type: string }
+        email: { type: string }
+        phone: { type: string }
+        department: { type: string }
+        semester: { type: integer }
+
+    Course:
+      type: object
+      properties:
+        id: { type: integer }
+        courseCode: { type: string }
+        courseName: { type: string }
+        credits: { type: integer }
+        department: { type: string }
+        semester: { type: integer }
+
+    Marks:
+      type: object
+      properties:
+        id: { type: integer }
+        studentId: { type: integer }
+        courseId: { type: integer }
+        examType: { type: string, enum: [internal, external, practical, assignment] }
+        marksObtained: { type: number }
+        maxMarks: { type: number }
+        grade: { type: string }
+
+    Fees:
+      type: object
+      properties:
+        id: { type: integer }
+        studentId: { type: integer }
+        feeType: { type: string }
+        totalAmount: { type: number }
+        paidAmount: { type: number }
+        status: { type: string, enum: [paid, pending, partial, overdue] }
+
+    Attendance:
+      type: object
+      properties:
+        id: { type: integer }
+        studentId: { type: integer }
+        courseId: { type: integer }
+        date: { type: string, format: date }
+        status: { type: string, enum: [present, absent, late, excused] }
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ─── Auth ───────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password]
+              properties:
+                name: { type: string, example: "John Doe" }
+                email: { type: string, example: "john@cms.edu" }
+                password: { type: string, example: "secret123" }
+                role: { type: string, enum: [admin, staff, teacher], example: "staff" }
+      responses:
+        '201': { description: Registration successful }
+        '409': { description: Email already exists }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login and receive JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, example: "john@cms.edu" }
+                password: { type: string, example: "secret123" }
+      responses:
+        '200': { description: Login successful, returns token }
+        '401': { description: Invalid credentials }
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get logged-in user profile
+      responses:
+        '200': { description: User profile }
+
+  /auth/change-password:
+    put:
+      tags: [Auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        '200': { description: Password updated }
+
+  # ─── Students ───────────────────────────────
+  /students:
+    get:
+      tags: [Students]
+      summary: Get all students (paginated, searchable)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10 }
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: department
+          schema: { type: string }
+        - in: query
+          name: semester
+          schema: { type: integer }
+      responses:
+        '200': { description: List of students }
+
+    post:
+      tags: [Students]
+      summary: Add a new student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rollNumber, firstName, lastName, email, department, semester]
+              properties:
+                rollNumber: { type: string, example: "CS2024001" }
+                firstName: { type: string, example: "Alice" }
+                lastName: { type: string, example: "Smith" }
+                email: { type: string, example: "alice@college.edu" }
+                phone: { type: string }
+                department: { type: string, example: "Computer Science" }
+                semester: { type: integer, example: 3 }
+                admissionYear: { type: integer, example: 2024 }
+      responses:
+        '201': { description: Student created }
+
+  /students/{id}:
+    get:
+      tags: [Students]
+      summary: Get student by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Student data }
+        '404': { description: Student not found }
+
+    put:
+      tags: [Students]
+      summary: Update student
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Student' }
+      responses:
+        '200': { description: Student updated }
+
+    delete:
+      tags: [Students]
+      summary: Delete student (admin only)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Student deleted }
+
+  # ─── Courses ────────────────────────────────
+  /courses:
+    get:
+      tags: [Courses]
+      summary: Get all courses
+      responses:
+        '200': { description: List of courses }
+
+    post:
+      tags: [Courses]
+      summary: Create a course
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [courseCode, courseName, department, semester]
+              properties:
+                courseCode: { type: string, example: "CS301" }
+                courseName: { type: string, example: "Data Structures" }
+                credits: { type: integer, example: 4 }
+                department: { type: string, example: "Computer Science" }
+                semester: { type: integer, example: 3 }
+      responses:
+        '201': { description: Course created }
+
+  /courses/{courseId}/enroll:
+    post:
+      tags: [Courses]
+      summary: Enroll a student in a course
+      parameters:
+        - in: path
+          name: courseId
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                studentId: { type: integer, example: 1 }
+      responses:
+        '201': { description: Enrolled successfully }
+        '409': { description: Already enrolled }
+
+  # ─── Marks ──────────────────────────────────
+  /marks:
+    post:
+      tags: [Marks]
+      summary: Add marks for a student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, courseId, marksObtained]
+              properties:
+                studentId: { type: integer }
+                courseId: { type: integer }
+                examType: { type: string, enum: [internal, external, practical, assignment] }
+                marksObtained: { type: number, example: 78.5 }
+                maxMarks: { type: number, example: 100 }
+                examDate: { type: string, format: date }
+      responses:
+        '201': { description: Marks added }
+
+  /marks/student/{studentId}:
+    get:
+      tags: [Marks]
+      summary: Get marks for a student (with summary)
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Marks list + summary }
+
+  # ─── Fees ───────────────────────────────────
+  /fees:
+    post:
+      tags: [Fees]
+      summary: Add fee record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [studentId, feeType, totalAmount]
+              properties:
+                studentId: { type: integer }
+                feeType: { type: string, enum: [tuition, hostel, library, exam, other] }
+                totalAmount: { type: number, example: 50000 }
+                paidAmount: { type: number, example: 25000 }
+                dueDate: { type: string, format: date }
+      responses:
+        '201': { description: Fee record created }
+
+  /fees/student/{studentId}:
+    get:
+      tags: [Fees]
+      summary: Get fee summary for student
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Fee records + summary }
+
+  # ─── Attendance ─────────────────────────────
+  /attendance:
+    post:
+      tags: [Attendance]
+      summary: Mark attendance (single or bulk)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    studentId: { type: integer }
+                    courseId: { type: integer }
+                    date: { type: string, format: date }
+                    status: { type: string, enum: [present, absent, late, excused] }
+                - type: object
+                  properties:
+                    records:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          studentId: { type: integer }
+                          courseId: { type: integer }
+                          date: { type: string, format: date }
+                          status: { type: string }
+      responses:
+        '201': { description: Attendance marked }
+
+  /attendance/student/{studentId}:
+    get:
+      tags: [Attendance]
+      summary: Get attendance report for a student
+      parameters:
+        - in: path
+          name: studentId
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: startDate
+          schema: { type: string, format: date }
+        - in: query
+          name: endDate
+          schema: { type: string, format: date }
+        - in: query
+          name: courseId
+          schema: { type: integer }
+      responses:
+        '200': { description: Attendance records + percentage summary }
