@@ -14,7 +14,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     getDashboardStats()
-      .then(({ data }) => setStats(data))
+      .then(({ data }) => setStats(data?.data || data))
       .catch(() => {/* use defaults */})
       .finally(() => setLoading(false));
   }, []);
@@ -62,16 +62,7 @@ const Dashboard = () => {
       </div>
 
       {/* Info strip */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-4 flex items-start gap-3">
-        <AlertCircle size={18} className="text-blue-500 mt-0.5 flex-shrink-0" />
-        <div>
-          <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Backend not connected?</p>
-          <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-            Stats will show zeros until your Node.js API at <code className="bg-blue-100 dark:bg-blue-800 px-1 rounded">http://localhost:5000/api/v1</code> is running.
-          </p>
-        </div>
-      </div>
-
+     
       {/* Summary rows */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         {/* Fees summary */}
