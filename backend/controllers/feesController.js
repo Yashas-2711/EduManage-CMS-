@@ -34,7 +34,11 @@ const getFeesByStudent = asyncHandler(async (req, res) => {
   if (!student) throw createError('Student not found.', 404);
 
   const where = { studentId };
-  if (status) where.status = status;
+  if (req.query.status) where.status = req.query.status;
+  if (req.query.feeType) where.feeType = req.query.feeType;
+  if (req.query.semester) where.semester = req.query.semester;
+  if (req.query.academicYear) where.academicYear = req.query.academicYear;
+  if (req.query.paymentMode) where.paymentMode = req.query.paymentMode;
 
   const { count, rows: fees } = await Fees.findAndCountAll({
     where,
@@ -94,6 +98,10 @@ const getAllFees = asyncHandler(async (req, res) => {
   const { limit, offset, page } = getPagination(req.query);
   const where = {};
   if (req.query.status) where.status = req.query.status;
+  if (req.query.feeType) where.feeType = req.query.feeType;
+  if (req.query.semester) where.semester = req.query.semester;
+  if (req.query.academicYear) where.academicYear = req.query.academicYear;
+  if (req.query.paymentMode) where.paymentMode = req.query.paymentMode;
 
   const { count, rows } = await Fees.findAndCountAll({
     where,

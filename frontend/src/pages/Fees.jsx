@@ -8,6 +8,7 @@ import { getFees, createFee, updateFee, getStudents } from '../services/cmsServi
 const EMPTY = {
   studentId: '', feeType: 'tuition', totalAmount: '', paidAmount: 0,
   dueDate: '', semester: '', academicYear: '', remarks: '',
+  paymentMode: '', paymentDate: '', transactionId: ''
 };
 
 const statusColors = {
@@ -18,12 +19,17 @@ const statusColors = {
 };
 
 const feeTypeOptions = ['tuition', 'hostel', 'library', 'exam', 'other'];
+const paymentModeOptions = ['cash', 'online', 'cheque', 'dd'];
 
 const Fees = () => {
   const [fees, setFees]         = useState([]);
   const [students, setStudents] = useState([]);
   const [loading, setLoading]   = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterFeeType, setFilterFeeType] = useState('');
+  const [filterSemester, setFilterSemester] = useState('');
+  const [filterAcademicYear, setFilterAcademicYear] = useState('');
+  const [filterPaymentMode, setFilterPaymentMode] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [form, setForm]         = useState(EMPTY);
@@ -36,6 +42,10 @@ const Fees = () => {
     try {
       const params = { page, limit: 10 };
       if (filterStatus) params.status = filterStatus;
+      if (filterFeeType) params.feeType = filterFeeType;
+      if (filterSemester) params.semester = filterSemester;
+      if (filterAcademicYear) params.academicYear = filterAcademicYear;
+      if (filterPaymentMode) params.paymentMode = filterPaymentMode;
       const [f, s] = await Promise.all([getFees(params), getStudents({ limit: 200 })]);
       setFees(f.data?.data ?? f.data ?? []);
       setTotalPages(f.data?.pagination?.totalPages ?? 1);
@@ -45,7 +55,7 @@ const Fees = () => {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, page]);
+  }, [filterStatus, filterFeeType, filterSemester, filterAcademicYear, filterPaymentMode, page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -166,21 +176,73 @@ const Fees = () => {
         </div>
       )}
 
-      {/* Status filter */}
-      <div className="flex gap-2 flex-wrap">
-        {['', 'paid', 'partial', 'pending', 'overdue'].map((s) => (
-          <button
-            key={s || 'all'}
-            onClick={() => { setFilterStatus(s); setPage(1); }}
-            className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
-              filterStatus === s
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
-                : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-            }`}
+      {/* Filters Section */}
+      <div className="flex flex-wrap gap-4 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm">
+        <div className="flex flex-col gap-1 w-full sm:w-auto">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Status</label>
+          <div className="flex gap-2 flex-wrap">
+            {['', 'paid', 'partial', 'pending', 'overdue'].map((s) => (
+              <button
+                key={s || 'all'}
+                onClick={() => { setFilterStatus(s); setPage(1); }}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium capitalize transition-colors ${
+                  filterStatus === s
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/20'
+                    : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
+                }`}
+              >
+                {s || 'All'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[120px]">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Fee Type</label>
+          <select 
+            value={filterFeeType} 
+            onChange={(e) => { setFilterFeeType(e.target.value); setPage(1); }}
+            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
           >
-            {s || 'All'}
-          </button>
-        ))}
+            <option value="">All Types</option>
+            {feeTypeOptions.map(t => <option key={t} value={t} className="capitalize">{t}</option>)}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[120px]">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Semester</label>
+          <select 
+            value={filterSemester} 
+            onChange={(e) => { setFilterSemester(e.target.value); setPage(1); }}
+            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+          >
+            <option value="">All Semesters</option>
+            {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>Semester {n}</option>)}
+          </select>
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[140px]">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Academic Year</label>
+          <input 
+            type="text"
+            placeholder="e.g. 2024-25"
+            value={filterAcademicYear} 
+            onChange={(e) => { setFilterAcademicYear(e.target.value); setPage(1); }}
+            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+          />
+        </div>
+
+        <div className="flex flex-col gap-1 w-full sm:w-auto min-w-[120px]">
+          <label className="text-xs font-medium text-slate-600 dark:text-slate-400">Payment Mode</label>
+          <select 
+            value={filterPaymentMode} 
+            onChange={(e) => { setFilterPaymentMode(e.target.value); setPage(1); }}
+            className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+          >
+            <option value="">All Modes</option>
+            {paymentModeOptions.map(t => <option key={t} value={t} className="uppercase">{t}</option>)}
+          </select>
+        </div>
       </div>
 
       <Table columns={columns} data={fees} loading={loading} page={page} totalPages={totalPages} onPageChange={setPage} />
@@ -263,6 +325,39 @@ const Fees = () => {
                 <option value="">Select semester</option>
                 {[1,2,3,4,5,6,7,8].map(n => <option key={n} value={n}>Semester {n}</option>)}
               </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Payment Mode</label>
+              <select
+                value={form.paymentMode || ''}
+                onChange={(e) => setForm({ ...form, paymentMode: e.target.value || null })}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              >
+                <option value="">Select mode (optional)</option>
+                {paymentModeOptions.map(t => <option key={t} value={t} className="uppercase">{t}</option>)}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Payment Date</label>
+              <input
+                type="date"
+                value={form.paymentDate || ''}
+                onChange={(e) => setForm({ ...form, paymentDate: e.target.value })}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">Transaction ID</label>
+              <input
+                type="text"
+                value={form.transactionId || ''}
+                onChange={(e) => setForm({ ...form, transactionId: e.target.value })}
+                placeholder="e.g. TXN123456"
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-800 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 transition"
+              />
             </div>
           </div>
 
